@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Daily Task Manager</title>
+    <!-- We load Tailwind CSS directly for rapid styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+    <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+        <h1 class="text-3xl font-bold mb-8 text-gray-800">Daily Task Manager</h1>
+
+        <!-- Add Task Form -->
+        <form id="taskForm" class="mb-10 flex gap-4">
+            <input type="text" id="employeeName" placeholder="Your Name" class="flex-1 p-3 border border-gray-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required>
+            <input type="text" id="taskDesc" placeholder="What are you working on today?" class="flex-2 w-1/2 p-3 border border-gray-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required>
+            <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded font-semibold hover:bg-blue-700 transition duration-200 shadow-sm">Add Task</button>
+        </form>
+
+        <!-- Task List Area -->
+        <div>
+            <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Today's Tasks</h2>
+            <ul id="taskList" class="space-y-3">
+                <li class="text-gray-500 italic">Loading tasks...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
+        const API_URL = 'YOUR_WEB_APP_URL_HERE'; 
+
+        // Function to fetch tasks from the Google Sheet and render them
+        async function loadTasks() {
+            try {
+                const response = await fetch(API_URL);
+                const tasks = await response.json();
+                const list = document.getElementById('taskList');
+                list.innerHTML = ''; // Clear the list
+
+                if(tasks.length === 0) {
+                     list.innerHTML = '<li class="text-gray-500 italic">No tasks added yet today.</li>';
+                     return;
+                }
+
+                // Loop through tasks and build HTML elements for each
+                tasks.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = 'p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center hover:shadow-sm transition';
+                    li.innerHTML = `
+                        <div>
+                            <span class="font-bold text-gray-800 block">${task.employee}</span>
+                            <span class="text-gray-600">${task.task}</span>
+                        </div>
+                        <span class="text-xs font-bold px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 uppercase tracking-wider">${task.status}</span>
+                    `;
+                    list.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                document.getElementById('taskList').innerHTML = '<li class="text-red-500">Failed to load tasks.</li>';
+            }
+        }
+
+        // Event listener for when an employee submits a new task
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevents the page from refreshing
+            
+            const employee = document.getElementById('employeeName').value;
+            const task = document.getElementById('taskDesc').value;
+            const submitButton = e.target.querySelector('button');
+            
+            // Visual feedback while saving
+            submitButton.textContent = 'Saving...';
+            submitButton.disabled = true;
+            submitButton.classList.add('opacity-75', 'cursor-not-allowed');
+
+            try {
+                // Send the data to Google Apps Script
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ employee, task }),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+
+                // Clear the form inputs and refresh the visual task list
+                e.target.reset();
+                await loadTasks();
+            } catch (error) {
+                console.error('Error adding task:', error);
+                alert("There was an error saving your task.");
+            } finally {
+                // Reset the button state
+                submitButton.textContent = 'Add Task';
+                submitButton.disabled = false;
+                submitButton.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        });
+
+        // Trigger the initial load of tasks when the page opens
+        if(API_URL !== 'YOUR_WEB_APP_URL_HERE') {
+            loadTasks();
+        }
+    </script>
+</body>
+</html>
